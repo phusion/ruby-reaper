@@ -1,6 +1,16 @@
 require 'spec_helper'
 
 describe Reaper do
+  describe "#stop_child_process" do
+    after :each do
+      terminated_child_processes.clear
+      reset_reaper
+    end
+
+    it "TERM's the process and then waits for it"
+    it "KILL's the process when it does not exit in time and then waits for it"
+  end
+
   describe "#waitpid_reap_other_children" do
     after :each do
       terminated_child_processes.clear
@@ -8,14 +18,14 @@ describe Reaper do
 
     it "returns the status immediately if a process has already been waited upon succesfully" do
       terminated_child_processes[123] = "my_status"
-      expect(Reaper.waitpid_reap_other_children(123)).to eq("my_status")
+      expect(reaper.waitpid_reap_other_children(123)).to eq("my_status")
     end
 
     it "calls waitpid to wait for the process to exit" do
       proc_double = double()
       expect(proc_double).to receive(:waitpid2).with(-1, 0).and_return([123, "my_status"])
       mock_process(proc_double) do
-        expect(Reaper.waitpid_reap_other_children(123)).to eq("my_status")
+        expect(reaper.waitpid_reap_other_children(123)).to eq("my_status")
       end
     end
 
@@ -23,7 +33,7 @@ describe Reaper do
       proc_double = double()
       expect(proc_double).to receive(:waitpid2).with(-1, 0).and_raise Errno::ECHILD
       mock_process(proc_double) do
-        expect(Reaper.waitpid_reap_other_children(123)).to eq(nil)
+        expect(reaper.waitpid_reap_other_children(123)).to eq(nil)
       end
     end
 
@@ -32,23 +42,11 @@ describe Reaper do
       expect(proc_double).to receive(:waitpid2).with(-1, 0).and_return([101, "other_status"])
       expect(proc_double).to receive(:waitpid2).with(-1, 0).and_return([123, "my_status"])
       mock_process(proc_double) do
-        expect(Reaper.waitpid_reap_other_children(123)).to eq("my_status")
+        expect(reaper.waitpid_reap_other_children(123)).to eq("my_status")
         expect(terminated_child_processes[101]).to eq("other_status")
       end
     end
 
-    def terminated_child_processes
-      Reaper.instance_variable_get(:@terminated_child_processes)
-    end
-
-    def mock_process(double)
-      begin
-        Reaper.const_set('Process', double)
-        yield
-      ensure
-        Reaper.send(:remove_const, 'Process')
-      end
-    end
   end
 
   describe "#parse_options" do
