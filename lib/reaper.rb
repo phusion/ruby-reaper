@@ -172,22 +172,33 @@ module Reaper
   end
 
   def self.parse_options(args)
+    reaper_opts = []
+    app_opts = []
+    got_split = false
+    args.each do |opt|
+      if opt == '--'
+        got_split = true
+      elsif got_split
+        app_opts << opt
+      else
+        reaper_opts << opt
+      end
+    end
+
     options = Options.new(true, LOG_LEVEL_INFO, nil)
     parser = OptionParser.new do |parser|
       parser.banner = 'Initialize the system.'
       parser.separator ''
-      # parser.add_argument('main_command', metavar = 'MAIN_COMMAND', type = str, nargs = '*',
-      #     help = 'The main command to run.')
       parser.on('--no-kill-all-on-exit', 'Don\'t kill all processes on the system upon exiting') do
-       options.kill_on_exit = false 
+       options.kill_all_on_exit = false
       end
       parser.on('--quiet', 'Only print warnings and errors') do
         options.log_level = LOG_LEVEL_WARN
       end
     end
 
-    # All undefined arguments get passed into args
-    options.args = parser.permute(args)
+    parser.parse(reaper_opts)
+    options.args = app_opts
     options
   end
 
