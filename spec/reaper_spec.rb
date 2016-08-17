@@ -1,6 +1,28 @@
 require 'spec_helper'
 
 describe Reaper do
+  describe "#kill_all_processes" do
+    it "sends all children a TERM and then waits until there are no more children" do
+      proc_double = double()
+      expect(proc_double).to receive(:kill).with('TERM', -1).and_return(nil)
+      expect(proc_double).to receive(:waitpid).with(-1, 0).and_return([123, "my_status"])
+      expect(proc_double).to receive(:waitpid).with(-1, 0).and_raise(Errno::ECHILD)
+      mock_process(proc_double) do
+        expect{reaper.kill_all_processes(1)}.to_not raise_error
+      end
+    end
+
+    it "if processes take too long it sends KILL instead" do
+      proc_double = double()
+      expect(proc_double).to receive(:kill).with('TERM', -1).and_return(nil)
+      expect(proc_double).to receive(:waitpid).with(-1, 0) { |i,j| sleep 1}
+      expect(proc_double).to receive(:kill).with('KILL', -1).and_return(nil)
+      mock_process(proc_double) do
+        expect{reaper.kill_all_processes(0.1)}.to_not raise_error
+      end
+    end
+  end
+
   describe "#stop_child_process" do
     after :each do
       terminated_child_processes.clear
@@ -19,9 +41,7 @@ describe Reaper do
     it "KILL's the process when it does not exit in time and then waits for it" do
       proc_double = double()
       expect(proc_double).to receive(:kill).with('TERM', 123).and_return(nil)
-      expect(proc_double).to receive(:waitpid2).with(-1, 0) do |i,j|
-        sleep 1
-      end
+      expect(proc_double).to receive(:waitpid2).with(-1, 0) { |i,j| sleep 1}
       expect(proc_double).to receive(:kill).with('KILL', 123).and_return(nil)
       expect(proc_double).to receive(:waitpid2).with(-1, 0).and_return([123, "my_status"])
       mock_process(proc_double) do

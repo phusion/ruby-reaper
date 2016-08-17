@@ -74,13 +74,8 @@ class Reaper
           # Save status for later.
           @terminated_child_processes[this_pid] = status
         end
-      rescue SystemCallError => e
-        case e
-        when Errno::ECHILD, Errno::ESRCH
-          return nil
-        else
-          raise
-        end
+      rescue Errno::ECHILD, Errno::ESRCH
+        return nil
       end
     end
     status
@@ -146,8 +141,8 @@ class Reaper
   def kill_all_processes(time_limit)
     info("Killing all processes...")
     begin
-      Process.kill(-1, signal.SIGTERM)
-    rescue SystemCallException
+      Process.kill('TERM', -1)
+    rescue SystemCallError
     end
 
     begin
@@ -157,20 +152,16 @@ class Reaper
         until done
           begin
             Process.waitpid(-1, 0)
-          rescue SystemCallException => e
-            if e.errno == Errno::ECHILD
-              done = true
-            else
-              raise
-            end
+          rescue Errno::ECHILD
+            done = true
           end
         end
       end
     rescue Timeout::Error
       warn("Not all processes have exited in time. Forcing them to exit.")
       begin
-        Process.kill(-1, 'KILL')
-      rescue SystemCallException
+        Process.kill('KILL', -1)
+      rescue SystemCallError
       end
     end
   end
