@@ -12,12 +12,13 @@ module Reaper
   LOG_LEVEL_INFO  = 2
   LOG_LEVEL_DEBUG = 3
 
-  @log_level = nil
+  @log_level = LOG_LEVEL_DEBUG
   @terminated_child_processes = {}
 
   Options = Struct.new(:kill_all_on_exit, :log_level, :args)
 
-  def run(args)
+  def self.run(args)
+    install_signal_handlers
     exit_code = nil
     exit_status = nil 
     args = args.args
@@ -48,7 +49,7 @@ module Reaper
   # Waits for the child process with the given PID, while at the same time
   # reaping any other child processes that have exited (e.g. adopted child
   # processes that have terminated).
-  def waitpid_reap_other_children(pid)
+  def self.waitpid_reap_other_children(pid)
     status = @terminated_child_processes[pid]
     if status
       # A previous call to waitpid_reap_other_children(),
@@ -71,7 +72,7 @@ module Reaper
           @terminated_child_processes[this_pid] = status
         end
       rescue SystemCallError => e
-        case e.errno
+        case e
         when Errno::ECHILD, Errno::ESRCH
           return nil
         else
@@ -82,7 +83,7 @@ module Reaper
     status
   end
 
-  def stop_child_process(name, pid, signo = 'TERM', time_limit = KILL_PROCESS_TIMEOUT)
+  def self.stop_child_process(name, pid, signo = 'TERM', time_limit = KILL_PROCESS_TIMEOUT)
     info("Shutting down #{name} (PID #{pid})...")
     begin
         Process.kill(signo, pid)
@@ -109,37 +110,37 @@ module Reaper
     end
   end
 
-  def error(message)
+  def self.error(message)
     if @log_level >= LOG_LEVEL_ERROR
       STDERR.puts "*** #{message}"
     end
   end
 
-  def warn(message)
+  def self.warn(message)
     if @log_level >= LOG_LEVEL_WARN
       STDERR.puts "*** #{message}"
     end
   end
 
-  def info(message)
+  def self.info(message)
     if @log_level >= LOG_LEVEL_INFO
       STDERR.puts "*** #{message}"
     end
   end
 
-  def debug(message)
+  def self.debug(message)
     if @log_level >= LOG_LEVEL_DEBUG
       STDERR.puts "*** #{message}"
     end
   end
 
-  def ignore_signals_and_raise_keyboard_interrupt(signame)
+  def self.ignore_signals_and_raise_keyboard_interrupt(signame)
     Signal.trap('TERM', 'IGNORE')
     Signal.trap('INT', 'IGNORE')
     raise SignalException.new(signame)
   end
 
-  def kill_all_processes(time_limit)
+  def self.kill_all_processes(time_limit)
     info("Killing all processes...")
     begin
       Process.kill(-1, signal.SIGTERM)
@@ -202,7 +203,7 @@ module Reaper
     options
   end
 
-  def install_signal_handlers
+  def self.install_signal_handlers
     Signal.trap 'TERM' do
       ignore_signals_and_raise_keyboard_interrupt('TERM')
     end
@@ -211,7 +212,7 @@ module Reaper
     end
   end
 
-  def main
+  def self.main
     options = parse_options(ARGV)
     begin
       run(args)
