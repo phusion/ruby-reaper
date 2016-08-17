@@ -103,7 +103,7 @@ class Reaper
     rescue Timeout::Error
       warn("#{name} (PID #{pid}) did not shut down in time. Forcing it to exit.")
       begin
-        Process.kill(pid, 'KILL')
+        Process.kill('KILL', pid)
       rescue SystemCallError
       end
       begin

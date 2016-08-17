@@ -7,8 +7,27 @@ describe Reaper do
       reset_reaper
     end
 
-    it "TERM's the process and then waits for it"
-    it "KILL's the process when it does not exit in time and then waits for it"
+    it "TERM's the process and then waits for it" do
+      proc_double = double()
+      expect(proc_double).to receive(:kill).with('TERM', 123).and_return(nil)
+      expect(proc_double).to receive(:waitpid2).with(-1, 0).and_return([123, "my_status"])
+      mock_process(proc_double) do
+        expect{reaper.stop_child_process('my_proc',123)}.to_not raise_error
+      end
+    end
+
+    it "KILL's the process when it does not exit in time and then waits for it" do
+      proc_double = double()
+      expect(proc_double).to receive(:kill).with('TERM', 123).and_return(nil)
+      expect(proc_double).to receive(:waitpid2).with(-1, 0) do |i,j|
+        sleep 1
+      end
+      expect(proc_double).to receive(:kill).with('KILL', 123).and_return(nil)
+      expect(proc_double).to receive(:waitpid2).with(-1, 0).and_return([123, "my_status"])
+      mock_process(proc_double) do
+        expect{reaper.stop_child_process('my_proc',123, 'TERM', 0.1)}.to_not raise_error
+      end
+    end
   end
 
   describe "#waitpid_reap_other_children" do
