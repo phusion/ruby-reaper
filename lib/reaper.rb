@@ -25,9 +25,9 @@ class Reaper
     exit_status = nil 
     args = options.args
     command = args.first
-    info("Running #{([command, args]).join(' ')}...")
+    info("Running #{args.join(' ')}...")
 
-    pid = Process.spawn(args)
+    pid = Process.spawn(args.join(' '))
 
     begin
       exit_code = waitpid_reap_other_children(pid)
@@ -35,8 +35,8 @@ class Reaper
         info("'#{command}' exited with unknown status.")
         exit_status = 1
       else
-        info("#{command} exited with status #{exit_status}.")
         exit_status = exit_code.exitstatus
+        info("#{command} exited with status #{exit_status}.")
       end
     rescue KeyboardInterrupt
         stop_child_process(command, pid)
@@ -208,12 +208,15 @@ class Reaper
 
   def self.main
     options = parse_options(ARGV)
+    reaper = Reaper.new
     begin
-      reaper = Reaper.new(options)
       reaper.run(options)
     rescue KeyboardInterrupt
-      warn("Init system aborted.")
+      reaper.warn("Init system aborted.")
       exit 2
+    rescue => e
+      reaper.error("Unknown error: #{e.class} #{e.message} #{e.backtrace.join("\n")}. Aborting.")
+      exit 3
     ensure
       if options.kill_all_on_exit
         reaper.kill_all_processes(KILL_ALL_PROCESSES_TIMEOUT)
