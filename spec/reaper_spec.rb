@@ -9,7 +9,7 @@ describe Reaper do
       options.args = args
       proc_double = double()
 
-      expect(proc_double).to receive(:spawn).with(args).and_return 123
+      expect(proc_double).to receive(:spawn).with(args.join(' ')).and_return 123
 
       expect(reaper).to receive(:waitpid_reap_other_children)
         .with(123) do
@@ -29,7 +29,7 @@ describe Reaper do
       options = Reaper::Options.new
       options.args = args
       proc_double = double()
-      expect(proc_double).to receive(:spawn).with(args).and_return 123
+      expect(proc_double).to receive(:spawn).with(args.join(' ')).and_return 123
       expect(reaper).to receive(:waitpid_reap_other_children)
         .with(123).and_return(double(exitstatus: 0, nil?: false))
       mock_process(proc_double) do
