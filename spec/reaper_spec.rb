@@ -122,7 +122,17 @@ describe Reaper do
         expect(terminated_child_processes[101]).to eq("other_status")
       end
     end
+  end
 
+  describe "ignore_signals_and_raise_keyboard_interrupt" do
+    it "traps INT and TERM and then raises a KeyboardInterrupt" do
+      signal_double = double
+      expect(signal_double).to receive(:trap).with('TERM', 'IGNORE')
+      expect(signal_double).to receive(:trap).with('INT', 'IGNORE')
+      mock_signal(signal_double) do
+        expect{reaper.ignore_signals_and_raise_keyboard_interrupt('TERM')}.to raise_error(Reaper::KeyboardInterrupt)
+      end
+    end
   end
 
   describe "#parse_options" do

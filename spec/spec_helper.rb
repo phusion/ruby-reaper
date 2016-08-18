@@ -25,3 +25,12 @@ def mock_process(double)
   end
 end
 
+def mock_signal(double)
+  begin
+    Reaper.const_set('Signal', double)
+    yield
+  ensure
+    Reaper.send(:remove_const, 'Signal')
+  end
+end
+

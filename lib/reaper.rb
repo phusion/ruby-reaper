@@ -1,9 +1,9 @@
 #!/usr/bin/env ruby
-require "reaper/version"
 require 'timeout'
 require 'optparse'
 
 class Reaper
+  VERSION = "0.0.1"
   KILL_PROCESS_TIMEOUT = 5
   KILL_ALL_PROCESSES_TIMEOUT = 5
 
@@ -210,7 +210,7 @@ class Reaper
     options = parse_options(ARGV)
     begin
       reaper = Reaper.new(options)
-      reaper.run(args)
+      reaper.run(options)
     rescue KeyboardInterrupt
       warn("Init system aborted.")
       exit 2
@@ -227,3 +227,5 @@ class Reaper
   end
 end
 
+# Run the reaper is this file is not loaded as a library
+Reaper.main if __FILE__ == $0
