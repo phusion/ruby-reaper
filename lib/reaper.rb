@@ -24,7 +24,7 @@ class Reaper
     exit_code = nil
     exit_status = nil 
     args = options.args
-    command = #{args.first}
+    command = args.first
     info("Running #{([command, args]).join(' ')}...")
 
     pid = Process.spawn(args)
@@ -35,15 +35,15 @@ class Reaper
         info("'#{command}' exited with unknown status.")
         exit_status = 1
       else
-        info("#{START_COMMAND} exited with status #{exit_status}.")
+        info("#{command} exited with status #{exit_status}.")
         exit_status = exit_code.exitstatus
       end
     rescue KeyboardInterrupt
-        stop_child_process(START_COMMAND, pid)
+        stop_child_process(command, pid)
         raise
-    rescue BaseException
+    rescue
         warn("An error occurred. Aborting.")
-        stop_child_process(START_COMMAND, pid)
+        stop_child_process(command, pid)
         raise
     end
     exit(exit_status)
@@ -62,7 +62,7 @@ class Reaper
       @terminated_child_processes.delete(pid)
       return status
     end
-    
+
     done = false
     status = nil
     until done
@@ -135,7 +135,7 @@ class Reaper
   def ignore_signals_and_raise_keyboard_interrupt(signame)
     Signal.trap('TERM', 'IGNORE')
     Signal.trap('INT', 'IGNORE')
-    raise SignalException.new(signame)
+    raise KeyboardInterrupt.new(signame)
   end
 
   def kill_all_processes(time_limit)
@@ -211,7 +211,7 @@ class Reaper
     begin
       reaper = Reaper.new(options)
       reaper.run(args)
-    rescue Interrupt
+    rescue KeyboardInterrupt
       warn("Init system aborted.")
       exit 2
     ensure
@@ -219,6 +219,11 @@ class Reaper
         reaper.kill_all_processes(KILL_ALL_PROCESSES_TIMEOUT)
       end 
     end
+  end
+
+  # A SignalException that's been caught by our signal handlers
+  # we can't use Interrupt because it has no constructor
+  class KeyboardInterrupt < SignalException
   end
 end
 

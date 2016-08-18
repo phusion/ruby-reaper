@@ -1,6 +1,43 @@
 require 'spec_helper'
 
 describe Reaper do
+  describe "#run" do
+    it "stops child processes when an interrupt is triggered" do
+      expect(reaper).to receive(:install_signal_handlers)
+      args = ['bash', '-c', 'echo hi']
+      options = Reaper::Options.new
+      options.args = args
+      proc_double = double()
+
+      expect(proc_double).to receive(:spawn).with(args).and_return 123
+
+      expect(reaper).to receive(:waitpid_reap_other_children)
+        .with(123) do
+          raise Reaper::KeyboardInterrupt.new('TERM')
+      end
+
+      expect(reaper).to receive(:stop_child_process).with('bash', 123)
+
+      mock_process(proc_double) do
+        expect{reaper.run(options)}.to raise_error(SignalException)
+      end
+    end
+
+    it "runs the options.args and exits with it" do
+      expect(reaper).to receive(:install_signal_handlers)
+      args = ['bash', '-c', 'echo hi']
+      options = Reaper::Options.new
+      options.args = args
+      proc_double = double()
+      expect(proc_double).to receive(:spawn).with(args).and_return 123
+      expect(reaper).to receive(:waitpid_reap_other_children)
+        .with(123).and_return(double(exitstatus: 0, nil?: false))
+      mock_process(proc_double) do
+        expect{reaper.run(options)}.to raise_error(SystemExit)
+      end
+    end
+  end
+
   describe "#kill_all_processes" do
     it "sends all children a TERM and then waits until there are no more children" do
       proc_double = double()
